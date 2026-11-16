@@ -13,9 +13,11 @@ $sentinel = Join-Path $appData ('installer-test-' + [Guid]::NewGuid().ToString()
 $shell = New-Object -ComObject WScript.Shell
 $legacyName = [Text.Encoding]::GetEncoding(1252).GetString([Text.Encoding]::UTF8.GetBytes('聊天话术助手')) + '.lnk'
 $legacyPath = Join-Path $desktop $legacyName
-$legacy = $shell.CreateShortcut($legacyPath)
+$legacyStaging = Join-Path $env:TEMP ([Guid]::NewGuid().ToString('N') + '.lnk')
+$legacy = $shell.CreateShortcut($legacyStaging)
 $legacy.TargetPath = Join-Path $installDir 'legacy-missing.exe'
 $legacy.Save()
+Move-Item -LiteralPath $legacyStaging -Destination $legacyPath -Force
 function Invoke-Installer {
     $process = Start-Process -FilePath $installer -ArgumentList '/S' -PassThru
     if (-not $process.WaitForExit(180000)) { $process.Kill(); throw 'Installer timed out' }
@@ -25,7 +27,11 @@ function Assert-Shortcuts {
     if (-not (Test-Path -LiteralPath $exe)) { throw 'ASCII executable not installed' }
     foreach ($file in @($shortcutPath, $startPath)) {
         if (-not (Test-Path -LiteralPath $file)) { throw ('Correct Chinese shortcut missing: ' + $file) }
-        $link = $shell.CreateShortcut($file)
+        $tempLink = Join-Path $env:TEMP ([Guid]::NewGuid().ToString('N') + '.lnk')
+        Copy-Item -LiteralPath $file -Destination $tempLink -Force
+        $link = $shell.CreateShortcut($tempLink)
+        Write-Host ('Shortcut: ' + $file + '; size=' + (Get-Item -LiteralPath $file).Length + '; target=' + $link.TargetPath + '; icon=' + $link.IconLocation)
+        Remove-Item -LiteralPath $tempLink -Force
         if ($link.TargetPath -ine $exe) { throw ('Invalid shortcut target: ' + $link.TargetPath) }
         if ($link.IconLocation -notlike ($exe + '*')) { throw ('Invalid shortcut icon: ' + $link.IconLocation) }
     }
@@ -33,7 +39,7 @@ function Assert-Shortcuts {
     Write-Host 'PASS: correct Unicode desktop/start menu names, existing ASCII targets and icons, old broken shortcut removed'
 }
 function Stop-Application {
-    Get-Process -Name 'ChatDraft' -ErrorAction SilentlyContinue | Where-Object { $_.Path -ieq $exe } | Stop-Process -Force
+    Get-Process -Name 'ChatDraft' -ErrorAction SilentlyContinue | Where-Object { $_.Path -ieq $exe } | Stop-Process -Force -ErrorAction SilentlyContinue
     Start-Sleep -Seconds 2
 }
 try {
@@ -59,6 +65,14 @@ try {
     Assert-Shortcuts
     if (-not (Test-Path -LiteralPath $sentinel)) { throw 'Reinstall deleted user data' }
     Write-Host 'PASS: uninstall/reinstall retains the independent user data directory'
+} catch {
+    $diagnostics = Join-Path $PSScriptRoot '../release/install-diagnostics'
+    New-Item -ItemType Directory -Path $diagnostics -Force | Out-Null
+    foreach ($linkFile in @($shortcutPath, $startPath, $legacyPath)) {
+        if (Test-Path -LiteralPath $linkFile) { Copy-Item -LiteralPath $linkFile -Destination (Join-Path $diagnostics ([Guid]::NewGuid().ToString('N') + '.lnk')) }
+    }
+    Get-ChildItem -LiteralPath $installDir -ErrorAction SilentlyContinue | Select-Object Name, Length | ConvertTo-Json | Set-Content (Join-Path $diagnostics 'installed-files.json') -Encoding UTF8
+    throw
 } finally {
     Stop-Application
     Remove-Item -LiteralPath $sentinel -Force -ErrorAction SilentlyContinue

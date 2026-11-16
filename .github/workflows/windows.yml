@@ -19,6 +19,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      - name: Verify Unicode shortcut creation before packaging
+        shell: pwsh
+        run: ./scripts/test-shortcuts.ps1
       - name: Build Windows x64 installer
         run: npm run dist:win
       - name: Install, verify Unicode shortcuts, launch, uninstall and reinstall
@@ -32,12 +35,14 @@ jobs:
           $hash = Get-FileHash "release/$file" -Algorithm SHA256
           "$($hash.Hash.ToLower())  $file" | Set-Content release/SHA256SUMS.txt
       - name: Upload build artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ChatDraft-Windows-x64
           path: |
             release/ChatDraft-Setup-*-x64.exe
             release/SHA256SUMS.txt
+            release/install-diagnostics/
           retention-days: 30
       - name: Publish verified preview
         env:
