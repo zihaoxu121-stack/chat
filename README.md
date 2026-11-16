@@ -1,12 +1,12 @@
 # 聊天话术助手 · Windows 客户端
 
-[下载 1.1.0 安装包](https://github.com/zihaoxu121-stack/chat/releases/tag/v1.1.0) · [Windows 构建与实装检查](https://github.com/zihaoxu121-stack/chat/actions/workflows/windows.yml)
+[下载 1.1.1 安装包](https://github.com/zihaoxu121-stack/chat/releases/tag/v1.1.1) · [Windows 构建与实装检查](https://github.com/zihaoxu121-stack/chat/actions/workflows/windows.yml)
 
 64 位 Windows 10 / 11 桌面客户端，自带运行环境；不需要安装 Node.js、Python 或本地模型。只拟稿，不接聊天账号、不代发消息。
 
 ## 使用
 
-1. 下载 `ChatDraft-Setup-1.1.0-x64.exe`，双击安装。覆盖安装保留本地数据。
+1. 下载 `ChatDraft-Setup-1.1.1-x64.exe`，双击安装。覆盖安装保留本地数据。
 2. 进入“模型与资料设置”，填写 API Base URL、API Key、支持图片的模型名。Base URL 一般以 `/v1` 结尾，程序拼接 `/chat/completions`；兼容接口支持文字与 `image_url` 数据 URL，通过提示词返回 JSON，无需原生 response_format。
 3. 点击“导入任务说明书”，选择你的完整 `.txt` 或 `.md` 文件，或复制全文后点击“从剪贴板导入”。先预览数量，再确认导入；本人资料、规范正文与各人的台账分别保存。实际私人说明书不放进公开源码或安装包。没有文件也可手动填写本人资料及联系人。
 4. 工作台粘贴/拖入截图，或粘贴文字。文字按消息逐行写“我：”“对方：”。输入不纠错；截图可点开放大。
@@ -15,7 +15,7 @@
 7. 用快捷按钮或指令调整“换个话题”“幽默一点”，直接使用当前身份与聊天，不重问背景；原稿保留在历史。
 8. 每个气泡独立复制；整版用单个换行连接，无空行、版号或项目符号。复制从不标记为已发送。
 
-单次最多8张截图，单张12MB，合计约24MB；文字最多5万字。超大尺寸图会提示裁剪。图像按解码像素做本轮重复比对，避免只因 PNG 元数据变化而重复拟稿。完全相同的输入加相同人物/规范上下文会打开已有草稿。
+单次最多8张截图，单张12MB，合计约24MB；文字最多5万字。超大尺寸图会提示裁剪。PNG/JPG按解码像素做本轮重复比对，WebP按原文件内容比对；同一PNG元数据变化不会导致重复拟稿。完全相同的输入加相同人物/规范上下文会打开已有草稿。
 
 ## 台账与规则
 
