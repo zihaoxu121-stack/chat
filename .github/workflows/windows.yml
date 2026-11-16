@@ -19,6 +19,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      - name: Electron UI regression
+        run: npm run test:ui
       - name: Verify Unicode shortcut creation before packaging
         shell: pwsh
         run: ./scripts/test-shortcuts.ps1
@@ -43,6 +45,7 @@ jobs:
             release/ChatDraft-Setup-*-x64.exe
             release/SHA256SUMS.txt
             release/install-diagnostics/
+            artifacts/*-v*.png
           retention-days: 30
       - name: Publish verified preview
         env:
@@ -53,10 +56,13 @@ jobs:
           $tag = "v$version"
           gh release view $tag --repo "$env:GITHUB_REPOSITORY" 2>$null
           if ($LASTEXITCODE -ne 0) {
-            gh release create $tag --repo "$env:GITHUB_REPOSITORY" --target "$env:GITHUB_SHA" --title "聊天话术助手 $version" --notes "修复中文快捷方式乱码及错误启动路径。已在 Windows runner 实际安装、通过快捷方式启动并验证卸载重装保留数据。安装包未签名；Windows 10 实机与真实 API 效果仍待验证。" --prerelease
+            gh release create $tag --repo "$env:GITHUB_REPOSITORY" --target "$env:GITHUB_SHA" --title "聊天话术助手 $version" --notes-file RELEASE_NOTES.md --prerelease
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
           gh release upload $tag "release/ChatDraft-Setup-$version-x64.exe" release/SHA256SUMS.txt --repo "$env:GITHUB_REPOSITORY" --clobber
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $previews = @(Get-ChildItem artifacts -Filter "*-v*.png" | ForEach-Object { $_.FullName })
+          gh release upload $tag @previews --repo "$env:GITHUB_REPOSITORY" --clobber
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           gh release view preview --repo "$env:GITHUB_REPOSITORY" 2>$null
           if ($LASTEXITCODE -eq 0) {

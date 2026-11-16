@@ -1,6 +1,6 @@
 ﻿Unicode true
 !ifndef APP_VERSION
-  !define APP_VERSION "1.0.1"
+  !define APP_VERSION "1.1.0"
 !endif
 !include "MUI2.nsh"
 !include "LogicLib.nsh"
