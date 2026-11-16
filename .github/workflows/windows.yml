@@ -5,6 +5,9 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+concurrency:
+  group: windows-release
+  cancel-in-progress: false
 jobs:
   windows:
     runs-on: windows-latest
@@ -18,28 +21,41 @@ jobs:
       - run: npm test
       - name: Build Windows x64 installer
         run: npm run dist:win
+      - name: Install, verify Unicode shortcuts, launch, uninstall and reinstall
+        shell: pwsh
+        run: ./scripts/test-windows-install.ps1
       - name: Calculate SHA256
         shell: pwsh
         run: |
-          $hash = Get-FileHash release/ChatDraft-Setup-1.0.0-x64.exe -Algorithm SHA256
-          "$($hash.Hash.ToLower())  ChatDraft-Setup-1.0.0-x64.exe" | Set-Content release/SHA256SUMS.txt
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $file = "ChatDraft-Setup-$version-x64.exe"
+          $hash = Get-FileHash "release/$file" -Algorithm SHA256
+          "$($hash.Hash.ToLower())  $file" | Set-Content release/SHA256SUMS.txt
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: ChatDraft-Windows-x64
           path: |
-            release/ChatDraft-Setup-1.0.0-x64.exe
+            release/ChatDraft-Setup-*-x64.exe
             release/SHA256SUMS.txt
           retention-days: 30
-      - name: Publish downloadable preview
+      - name: Publish verified preview
         env:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh
         run: |
-          gh release view preview --repo "$env:GITHUB_REPOSITORY" 2>$null
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $tag = "v$version"
+          gh release view $tag --repo "$env:GITHUB_REPOSITORY" 2>$null
           if ($LASTEXITCODE -ne 0) {
-            gh release create preview --repo "$env:GITHUB_REPOSITORY" --target "$env:GITHUB_SHA" --title "Windows 客户端预览版" --notes "本地档案与聊天拟稿助手。下载 Setup.exe 后双击安装；配置你自己的模型 API。安装包未签名，尚待 Windows 10 实机与真实模型验收。" --prerelease
+            gh release create $tag --repo "$env:GITHUB_REPOSITORY" --target "$env:GITHUB_SHA" --title "聊天话术助手 $version" --notes "修复中文快捷方式乱码及错误启动路径。已在 Windows runner 实际安装、通过快捷方式启动并验证卸载重装保留数据。安装包未签名；Windows 10 实机与真实 API 效果仍待验证。" --prerelease
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
-          gh release upload preview release/ChatDraft-Setup-1.0.0-x64.exe release/SHA256SUMS.txt --repo "$env:GITHUB_REPOSITORY" --clobber
-          exit $LASTEXITCODE
+          gh release upload $tag "release/ChatDraft-Setup-$version-x64.exe" release/SHA256SUMS.txt --repo "$env:GITHUB_REPOSITORY" --clobber
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          gh release view preview --repo "$env:GITHUB_REPOSITORY" 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            gh release delete-asset preview ChatDraft-Setup-1.0.0-x64.exe --repo "$env:GITHUB_REPOSITORY" --yes 2>$null
+            gh release edit preview --repo "$env:GITHUB_REPOSITORY" --title "旧版已撤回：请使用 1.0.1 或更新版本" --notes "1.0.0 的中文快捷方式编码有误，安装包已撤回。请从 Releases 下载 v1.0.1 或更新版本。"
+          }
+          exit 0

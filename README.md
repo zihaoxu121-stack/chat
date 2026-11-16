@@ -1,14 +1,14 @@
 # 聊天话术助手 · Windows 客户端
 
-[下载安装包（预览版）](https://github.com/zihaoxu121-stack/chat/releases/tag/preview) · [查看自动构建进度](https://github.com/zihaoxu121-stack/chat/actions/workflows/windows.yml)
+[下载安装包（预览版）](https://github.com/zihaoxu121-stack/chat/releases/tag/v1.0.1) · [查看自动构建进度](https://github.com/zihaoxu121-stack/chat/actions/workflows/windows.yml)
 
-第一次上传后需等待自动构建成功，Release 中才会出现 `.exe` 安装包。
+1.0.1 修复 Windows 中文快捷方式乱码及错误启动路径。新版会替换本程序的旧乱码快捷方式，聊天数据保持不变。
 
 适用：64 位 Windows 10 / 11。安装包自带运行环境，不需要 Node.js、Python 或本地模型，不需要命令行。程序不连接聊天账号，也不代发消息。
 
 ## 开始使用
 
-1. 双击 `ChatDraft-Setup-1.0.0-x64.exe`，安装完成后启动。程序安装到当前用户的 `%LOCALAPPDATA%\Programs\ChatDraftAssistant`，不要求管理员权限。
+1. 双击 `ChatDraft-Setup-1.0.1-x64.exe`，安装完成后启动。程序安装到当前用户的 `%LOCALAPPDATA%\Programs\ChatDraftAssistant`，不要求管理员权限。
 2. 打开“模型与设置”，填写 API Base URL、API Key、支持图片输入的模型名，以及“本人真实信息”（可从最初需求中的本人档案复制）。本人档案只保存在本机，不放在公开源码中。Base URL 通常以 `/v1` 结尾，不要填写完整的 `/chat/completions`；程序会拼接该路径。兼容接口必须接受标准 OpenAI Chat Completions 的文字和 `image_url` 数据 URL 输入。程序通过提示词要求 JSON，不依赖原生 `response_format` 功能。
 3. 在工作台粘贴或拖入截图；也可以粘贴文字。文字建议按每条消息一行写“我：”“对方：”，不改动错别字。
 4. 点击识别后，对照截图核对平台、联系人和消息归属。认不准时手选，缺少档案时点击“新联系人，建立档案”。即使匹配成功也保留确认步骤。同平台同名多人不会自动选人。

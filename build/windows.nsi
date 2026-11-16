@@ -1,10 +1,13 @@
-Unicode true
+﻿Unicode true
+!ifndef APP_VERSION
+  !define APP_VERSION "1.0.1"
+!endif
 !include "MUI2.nsh"
 !include "LogicLib.nsh"
 !include "x64.nsh"
 !include "WinVer.nsh"
 Name "聊天话术助手"
-OutFile "..\release\ChatDraft-Setup-1.0.0-x64.exe"
+OutFile "..\release\ChatDraft-Setup-${APP_VERSION}-x64.exe"
 InstallDir "$LOCALAPPDATA\Programs\ChatDraftAssistant"
 RequestExecutionLevel user
 SetCompressor /SOLID lzma
@@ -12,15 +15,15 @@ SetCompressorDictSize 32
 BrandingText "聊天话术助手 · 本地保存，只拟稿不代发"
 Icon "icon.ico"
 UninstallIcon "icon.ico"
-VIProductVersion "1.0.0.0"
+VIProductVersion "${APP_VERSION}.0"
 VIAddVersionKey /LANG=2052 "ProductName" "聊天话术助手"
 VIAddVersionKey /LANG=2052 "FileDescription" "聊天话术助手安装程序"
-VIAddVersionKey /LANG=2052 "FileVersion" "1.0.0"
+VIAddVersionKey /LANG=2052 "FileVersion" "${APP_VERSION}"
 VIAddVersionKey /LANG=2052 "LegalCopyright" "Chat Draft"
 !define MUI_ABORTWARNING
 !define MUI_ICON "icon.ico"
 !define MUI_UNICON "icon.ico"
-!define MUI_FINISHPAGE_RUN "$INSTDIR\聊天话术助手.exe"
+!define MUI_FINISHPAGE_RUN "$INSTDIR\ChatDraft.exe"
 !define MUI_FINISHPAGE_RUN_TEXT "启动聊天话术助手"
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_INSTFILES
@@ -47,17 +50,21 @@ FunctionEnd
 Section "安装"
   SetShellVarContext current
   SetOutPath "$INSTDIR"
+  Delete "$INSTDIR\聊天话术助手.exe"
   File /r "..\release\win-unpacked\*.*"
+  File /oname=RepairShortcuts.ps1 "..\scripts\repair-shortcuts.ps1"
   WriteUninstaller "$INSTDIR\Uninstall.exe"
   CreateDirectory "$SMPROGRAMS\聊天话术助手"
-  CreateShortcut "$SMPROGRAMS\聊天话术助手\聊天话术助手.lnk" "$INSTDIR\聊天话术助手.exe" "" "$INSTDIR\聊天话术助手.exe"
+  CreateShortcut "$SMPROGRAMS\聊天话术助手\聊天话术助手.lnk" "$INSTDIR\ChatDraft.exe" "" "$INSTDIR\ChatDraft.exe"
   CreateShortcut "$SMPROGRAMS\聊天话术助手\卸载.lnk" "$INSTDIR\Uninstall.exe"
-  CreateShortcut "$DESKTOP\聊天话术助手.lnk" "$INSTDIR\聊天话术助手.exe"
+  CreateShortcut "$DESKTOP\聊天话术助手.lnk" "$INSTDIR\ChatDraft.exe"
+  nsExec::ExecToLog 'powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$INSTDIR\RepairShortcuts.ps1" -InstallDir "$INSTDIR"'
+  Pop $0
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ChatDraftAssistant" "DisplayName" "聊天话术助手"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ChatDraftAssistant" "DisplayVersion" "1.0.0"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ChatDraftAssistant" "DisplayVersion" "${APP_VERSION}"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ChatDraftAssistant" "Publisher" "Chat Draft"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ChatDraftAssistant" "UninstallString" '$\"$INSTDIR\Uninstall.exe$\"'
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ChatDraftAssistant" "DisplayIcon" "$INSTDIR\聊天话术助手.exe"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ChatDraftAssistant" "DisplayIcon" "$INSTDIR\ChatDraft.exe"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ChatDraftAssistant" "InstallLocation" "$INSTDIR"
   WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ChatDraftAssistant" "NoModify" 1
   WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ChatDraftAssistant" "NoRepair" 1
