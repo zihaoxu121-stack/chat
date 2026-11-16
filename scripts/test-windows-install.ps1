@@ -1,12 +1,12 @@
 ﻿$ErrorActionPreference = 'Stop'
 $version = (Get-Content -LiteralPath (Join-Path $PSScriptRoot '../package.json') -Raw -Encoding UTF8 | ConvertFrom-Json).version
 $installer = (Resolve-Path (Join-Path $PSScriptRoot "../release/ChatDraft-Setup-$version-x64.exe")).Path
-$installDir = Join-Path $env:LOCALAPPDATA 'Programs\ChatDraftAssistant'
+$installDir = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'Programs\ChatDraftAssistant'
 $exe = Join-Path $installDir 'ChatDraft.exe'
 $desktop = [Environment]::GetFolderPath('DesktopDirectory')
 $shortcutPath = Join-Path $desktop '聊天话术助手.lnk'
 $startPath = Join-Path ([Environment]::GetFolderPath('Programs')) '聊天话术助手\聊天话术助手.lnk'
-$appData = Join-Path $env:APPDATA 'ChatDraftAssistant'
+$appData = Join-Path ([Environment]::GetFolderPath('ApplicationData')) 'ChatDraftAssistant'
 New-Item -ItemType Directory -Path $appData -Force | Out-Null
 $sentinel = Join-Path $appData ('installer-test-' + [Guid]::NewGuid().ToString() + '.txt')
 'Should survive uninstall and reinstall' | Set-Content -LiteralPath $sentinel -Encoding UTF8

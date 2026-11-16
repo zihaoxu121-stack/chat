@@ -14,7 +14,6 @@ function Read-LinkTarget([string]$Path) {
     try {
         Copy-Item -LiteralPath $Path -Destination $temp -Force
         $link = $shell.CreateShortcut($temp)
-        Write-Host ('READ target=[' + $link.TargetPath + ']; source=' + $Path + '; bytes=' + (Get-Item -LiteralPath $temp).Length)
         return [string]$link.TargetPath
     } finally { Remove-Item -LiteralPath $temp -Force -ErrorAction SilentlyContinue }
 }
@@ -47,8 +46,6 @@ foreach ($linkPath in @($expectedDesktop, $expectedStart, $expectedUninstall)) {
         $link.WorkingDirectory = $InstallDir
         $link.IconLocation = $target + ',0'
         $link.Save()
-        Write-Host ('WRITE target=[' + $link.TargetPath + ']; expected=[' + $target + ']; bytes=' + (Get-Item -LiteralPath $temp).Length)
-        Write-Host ('SAVED base64=' + [Convert]::ToBase64String([IO.File]::ReadAllBytes($temp)))
         New-Item -ItemType Directory -Path ([IO.Path]::GetDirectoryName($linkPath)) -Force | Out-Null
         Move-Item -LiteralPath $temp -Destination $linkPath -Force
         $savedTarget = Read-LinkTarget $linkPath
