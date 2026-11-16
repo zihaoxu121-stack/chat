@@ -2,7 +2,7 @@ const {app,BrowserWindow,ipcMain,clipboard,safeStorage,dialog,shell,session,nati
 app.setPath('userData',path.join(app.getPath('appData'),'ChatDraftAssistant'));
 app.commandLine.appendSwitch('disable-gpu');app.commandLine.appendSwitch('disable-background-networking');app.disableHardwareAcceleration();
 let win,store,service,pendingHandbook;const testMode=process.env.CHATDRAFT_E2E==='1'&&!app.isPackaged;
-if(testMode){app.setPath('userData',path.join('/tmp','chatdraft-e2e-'+process.pid))}
+if(testMode){app.setPath('userData',path.join(require('node:os').tmpdir(),'chatdraft-e2e-'+process.pid))}
 const gotLock=testMode||app.requestSingleInstanceLock();if(!gotLock)app.quit();app.on('second-instance',()=>{if(win){if(win.isMinimized())win.restore();win.show();win.focus()}});
 function key(){if(!store.data.settings.encryptedKey)return '';try{return safeStorage.decryptString(Buffer.from(store.data.settings.encryptedKey,'base64'))}catch{throw Error('本机密钥解密失败，请重新填写 API Key')}}
 function handle(name,fn){ipcMain.handle(name,async(event,...args)=>{try{if(event.sender!==win.webContents||event.senderFrame!==win.webContents.mainFrame)throw Error('不允许的请求');return {ok:true,data:await fn(...args)}}catch(e){return {ok:false,error:e.message}}})}
