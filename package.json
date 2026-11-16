@@ -1,0 +1,52 @@
+{
+  "name": "chat-draft-assistant",
+  "productName": "聊天话术助手",
+  "version": "1.0.0",
+  "description": "本地联系人档案与聊天拟稿桌面助手",
+  "author": "Chat Draft",
+  "private": true,
+  "main": "src/main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/*.test.cjs",
+    "dist:win": "node scripts/build-windows.cjs",
+    "pack:linux": "electron-builder --linux dir",
+    "test:ui": "node test/ui.cjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.61.1",
+    "electron": "45.3.2",
+    "electron-builder": "26.18.0",
+    "resedit": "^3.0.2"
+  },
+  "build": {
+    "appId": "local.chatdraft.assistant",
+    "asar": true,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "artifactName": "ChatDraft-Setup-${version}-${arch}.${ext}",
+      "signAndEditExecutable": false,
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false,
+      "createDesktopShortcut": true,
+      "shortcutName": "聊天话术助手",
+      "include": "build/installer.nsh"
+    },
+    "linux": {
+      "target": "dir",
+      "category": "Utility"
+    }
+  },
+  "license": "UNLICENSED"
+}

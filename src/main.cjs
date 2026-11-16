@@ -1,0 +1,29 @@
+const {app,BrowserWindow,ipcMain,clipboard,safeStorage,dialog,shell,session}=require('electron');const path=require('node:path');const fs=require('node:fs');const {Store}=require('./store.cjs');const {Service}=require('./service.cjs');const {callAPI,endpoint}=require('./api.cjs');const {cleanBubble,PROFILE,RULES}=require('./rules.cjs');
+app.setPath('userData',path.join(app.getPath('appData'),'ChatDraftAssistant'));
+app.commandLine.appendSwitch('disable-gpu');app.commandLine.appendSwitch('disable-background-networking');app.disableHardwareAcceleration();
+let win,store,service;const testMode=process.env.CHATDRAFT_E2E==='1'&&!app.isPackaged;
+if(testMode){app.setPath('userData',path.join('/tmp','chatdraft-e2e-'+process.pid))}
+const gotLock=testMode||app.requestSingleInstanceLock();if(!gotLock)app.quit();app.on('second-instance',()=>{if(win){if(win.isMinimized())win.restore();win.show();win.focus()}});
+function key(){if(!store.data.settings.encryptedKey)return '';try{return safeStorage.decryptString(Buffer.from(store.data.settings.encryptedKey,'base64'))}catch{throw Error('本机密钥解密失败，请重新填写 API Key')}}
+function handle(name,fn){ipcMain.handle(name,async(event,...args)=>{try{if(event.sender!==win.webContents||event.senderFrame!==win.webContents.mainFrame)throw Error('不允许的请求');return {ok:true,data:await fn(...args)}}catch(e){return {ok:false,error:e.message}}})}
+app.whenReady().then(()=>{if(!gotLock)return;try{store=new Store(app.getPath('userData'))}catch(e){dialog.showErrorBox('数据读取失败',e.message);app.quit();return;}
+ service=new Service(store,messages=>callAPI(store.data.settings,key(),messages));
+ session.defaultSession.setPermissionRequestHandler((_w,_p,callback)=>callback(false));
+ win=new BrowserWindow({width:1400,height:920,minWidth:1050,minHeight:720,backgroundColor:'#f5f6f8',autoHideMenuBar:true,title:'聊天话术助手',icon:path.join(__dirname,'icon.png'),webPreferences:{additionalArguments:testMode?['--chatdraft-e2e']:[],preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true,webSecurity:true}});
+ win.webContents.setWindowOpenHandler(()=>({action:'deny'}));win.webContents.on('will-navigate',e=>e.preventDefault());
+ // The renderer is entirely offline. API traffic exists only in the main process.
+ session.defaultSession.webRequest.onBeforeRequest((details,cb)=>cb({cancel:/^https?:|^wss?:/i.test(details.url)}));
+ handle('state',()=>({...store.publicState(),profile:PROFILE,rules:RULES}));
+ handle('saveContact',c=>store.saveContact(c));
+ handle('settings',input=>{const settings=store.data.settings;endpoint(input.baseURL);if(!String(input.model||'').trim())throw Error('请填写模型名');let encrypted=settings.encryptedKey;if(input.clearKey)encrypted=undefined;else if(input.key){if(!safeStorage.isEncryptionAvailable()||safeStorage.getSelectedStorageBackend?.()==='basic_text')throw Error('系统安全存储不可用，拒绝明文保存 Key');encrypted=safeStorage.encryptString(String(input.key).trim()).toString('base64')};store.data.settings={baseURL:input.baseURL.trim().replace(/\/$/,''),model:input.model.trim(),customPrompt:String(input.customPrompt||'').slice(0,15000),userProfile:String(input.userProfile||'').slice(0,15000),encryptedKey:encrypted};store.save();return store.publicState().settings;});
+ handle('recognize',s=>service.recognize(s));handle('create',s=>service.create(s));handle('generate',(id,extra)=>service.generate(id,extra));handle('session',id=>store.session(id));
+ handle('copy',value=>{if(typeof value!=='string'||value.length>4000)throw Error('复制内容无效');const cleaned=cleanBubble(value);clipboard.writeText(cleaned);return true});
+ handle('openData',()=>shell.openPath(store.dir));
+ handle('backup',async()=>{const result=await dialog.showSaveDialog(win,{defaultPath:'聊天助手备份-'+new Date().toISOString().slice(0,10)+'.json',filters:[{name:'JSON',extensions:['json']}]});if(result.canceled)return false;const data=structuredClone(store.data);delete data.settings.encryptedKey;fs.writeFileSync(result.filePath,JSON.stringify(data,null,2));return true});
+ handle('restore',async()=>{if(service.busy)throw Error('生成中不可恢复备份');const result=await dialog.showOpenDialog(win,{filters:[{name:'JSON',extensions:['json']}],properties:['openFile']});if(result.canceled)return false;const p=result.filePaths[0];if(fs.statSync(p).size>200*1024*1024)throw Error('备份超过200MB');let data;try{data=JSON.parse(fs.readFileSync(p,'utf8'))}catch{throw Error('备份不是有效JSON')};if(data.schema!==1||!Array.isArray(data.contacts)||!Array.isArray(data.sessions)||!data.settings)throw Error('备份格式不兼容');
+ const ids=new Set(data.contacts.map(c=>c.id));if(ids.size!==data.contacts.length||data.contacts.some(c=>typeof c.id!=='string'||typeof c.platform!=='string'||typeof c.nickname!=='string'||!Array.isArray(c.facts))||data.sessions.some(s=>!ids.has(s.contactId)||!s.source||typeof s.source.text!=='string'||!Array.isArray(s.source.images)||!s.contactSnapshot||!s.recognition||!Array.isArray(s.recognition.messages)||!Array.isArray(s.variants)))throw Error('备份数据不完整，已取消恢复');
+ const confirm=await dialog.showMessageBox(win,{type:'question',message:'恢复将替换现有档案和历史',detail:'当前数据会先自动保存为本地备份，API Key 和设置保留。',buttons:['取消','恢复'],defaultId:0,cancelId:0});if(confirm.response!==1)return false;fs.copyFileSync(store.file,path.join(store.dir,'before-restore-'+Date.now()+'.json'));data.settings=store.data.settings;store.data=data;store.save();return true;});
+ if(testMode){handle('testSeed',()=>{const c=store.saveContact({platform:'微信',nickname:'小林',facts:[{text:'杭州，幼师',date:'2026-11-16'}]});store.data.settings.model='e2e';store.data.settings.encryptedKey='test';service.api=require('../test/fixture.cjs').mockAPI;store.save();return c});handle('testClipboard',()=>clipboard.readText());}
+ win.loadFile(path.join(__dirname,'index.html'));
+});
+app.on('window-all-closed',()=>{if(process.platform!=='darwin')app.quit()});
